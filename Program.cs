@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 
+#pragma warning disable CA1416
+
 namespace Consoler
 {
 	class Program
@@ -9,7 +11,15 @@ namespace Consoler
 		public static string userName = Environment.UserName;
 		public static List<string> StartupQuotes = new() { "The Internet? Is that thing still around?", "Chuck Norris counted to infinity... twice.", "C is quirky, flawed, and an enormous success", "Chuck Norris doesn’t go hunting. Chuck Norris goes killing.", "Hey! It compiles! Ship it!", "God is real, unless declared integer.", "It works on my machine.", "Keyboard not found...\nPress any key to continue...", "There is no place like 127.0.0.1", "There’s no test like production.", "Who is General Failure? And why is he reading my disk?", "I think we agree, the past is over.", "Linux is only free if your time has no value.", "On the Internet, nobody knows you’re a dog.", "One man’s constant is another man’s variable.", "PHP – Yeah, you know me." };
 
-		private static async Task StartupAnimation()
+		bool isInit = true;
+		public static Dictionary<string, bool> canPerformAction = new();
+		private static void Init()
+		{
+			canPerformAction.Add("work", true);
+			canPerformAction.Add("crime", true);
+		}
+
+		private static void StartupAnimation()
 		{
 			for (int i = 0; i < r.Next(10, 20); i++)
 			{
@@ -37,8 +47,6 @@ namespace Consoler
 			Thread.Sleep(750);
 			Console.Clear();
 		}
-
-
 
 		public static Random r = new();
 
@@ -82,7 +90,7 @@ namespace Consoler
 			Console.WindowHeight = 50;
 			Console.WindowWidth = 75;
 
-			await StartupAnimation();
+			StartupAnimation();
 
 
 			await Player.ExperienceBar();
@@ -100,30 +108,64 @@ namespace Consoler
 			switch (command)
 			{
 				case "work":
-					int workTime = r.Next(100, 250);
-					Console.CursorVisible = false;
-					for (int i = 0; i < workTime; i++)
+					if (canPerformAction["work"] == true)
 					{
-						drawTextProgressBar(i, workTime, ConsoleColor.Yellow, "Working...");
-						await Task.Delay(50);
+                        int workTime = r.Next(100, 250);
+                        Console.CursorVisible = false;
+                        for (int i = 0; i < workTime; i++)
+                        {
+                            drawTextProgressBar(i, workTime, ConsoleColor.Yellow, "Working...");
+                            await Task.Delay(50);
+                        }
+                        Console.CursorVisible = true;
+                        int moneyGained = r.Next(0, 100 * (Player.level) / 2);
+                        Player.money += moneyGained;
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n+{moneyGained}$");
+                        Console.ForegroundColor = ConsoleColor.White;
 					}
-					Console.CursorVisible = true;
-					int moneyGained = r.Next(0, 100 * (Player.level) / 2);
-					Player.money += moneyGained;
-					Console.ForegroundColor = ConsoleColor.Green;
-					Console.WriteLine($"\n+{moneyGained}$");
-					Console.ForegroundColor = ConsoleColor.White;
+                    else
+					{
+						Console.WriteLine("You cannot work yet!\n{0} remaining...");
+					}
 					break;
 
-				case "study":
-					int studyTime = r.Next(250, 750);
+
+                case "study" or "learn":
+					int studyTime = r.Next(250, 350);
 					int experienceGained = r.Next(0, 50 * Player.level / 4);
 					for (int i = 0; i < studyTime; i++)
 					{
 						drawTextProgressBar(i, studyTime, ConsoleColor.Cyan, "Studying...");
 						await Task.Delay(150);
 					}
-					Player.GrantExperience(experienceGained);
+					await Player.GrantExperience(experienceGained);
+					break;
+
+				case "crime":
+					int chanceToGetCaught = 5;
+					int rolledNumber = r.Next(0, 100);
+					if(rolledNumber > chanceToGetCaught)
+					{
+						int moneyGained = r.Next(50, 100 * Player.level / 2);
+						experienceGained = r.Next(25,100 * Player.level / 4);
+						Console.WriteLine($"You commited a crime and it paid off!");
+						
+						Console.ForegroundColor = ConsoleColor.Green;
+						Console.WriteLine($"+{moneyGained}$");
+						
+						Console.ForegroundColor = ConsoleColor.Cyan;
+						Console.Write($" +{experienceGained} EXP");
+						Console.ForegroundColor = ConsoleColor.White;
+					}
+					else
+					{
+						int moneyLost = r.Next(50, 50 * Player.level);
+						Console.WriteLine("You tried to commit a crime and got caught!");
+						Console.ForegroundColor = ConsoleColor.Red;
+						Console.WriteLine($"-{moneyLost}$");
+						Console.ForegroundColor = ConsoleColor.White;
+					}
 					break;
 
 				case "stat":
@@ -196,7 +238,7 @@ namespace Consoler
 			while (true)
 			{
 				await Task.Delay(5000);
-				GrantExperience(Program.r.Next(0, 100 * level / 2));
+				await GrantExperience(Program.r.Next(0, 100 * level / 2));
 			}
 		}
 
@@ -223,5 +265,11 @@ namespace Consoler
 			}
 			await ExperienceBar();
 		}
+	
+		public static bool ChangeActionAvaibility(bool T)
+		{
+			return T = true;
+		}
+
 	}
 }

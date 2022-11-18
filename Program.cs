@@ -11,7 +11,7 @@ namespace Consoler
 		public static string userName = Environment.UserName;
 		public static List<string> StartupQuotes = new() { "The Internet? Is that thing still around?", "Chuck Norris counted to infinity... twice.", "C is quirky, flawed, and an enormous success", "Chuck Norris doesn’t go hunting. Chuck Norris goes killing.", "Hey! It compiles! Ship it!", "God is real, unless declared integer.", "It works on my machine.", "Keyboard not found...\nPress any key to continue...", "There is no place like 127.0.0.1", "There’s no test like production.", "Who is General Failure? And why is he reading my disk?", "I think we agree, the past is over.", "Linux is only free if your time has no value.", "On the Internet, nobody knows you’re a dog.", "One man’s constant is another man’s variable.", "PHP – Yeah, you know me." };
 
-		bool isInit = true;
+		private static bool isInit = true;
 		public static Dictionary<string, bool> canPerformAction = new();
 		private static void Init()
 		{
@@ -46,12 +46,37 @@ namespace Consoler
 			Console.BackgroundColor = ConsoleColor.Black;
 			Thread.Sleep(750);
 			Console.Clear();
+
+			Thread.Sleep(500);
+			Console.WriteLine("\n");
+			foreach (char chr in "Welcome, ")
+			{
+				Console.Write(chr);
+				Thread.Sleep(1);
+			}
+			Thread.Sleep(350);
+			foreach (char chr in userName)
+			{
+				Console.Write(chr);
+				Thread.Sleep(200);
+			}
+			Console.WriteLine("\n\n");
+
+			Console.Write($"BOOT....................");
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.Write("OK");
+			Console.ForegroundColor = ConsoleColor.White;
+
+			Thread.Sleep(750);
 		}
 
 		public static Random r = new();
 
-		public static void drawTextProgressBar(int progress, int total, ConsoleColor color, string message)
+
+		private static int animIndex = 0;
+		public static void drawTextProgressBar(int progress, int total, ConsoleColor color, string message, bool T)
 		{
+			List<char> animList = new() { '|','/','-','\\'};
 			//draw empty progress bar
 			Console.CursorLeft = 0;
 			Console.Write("["); //start
@@ -66,7 +91,7 @@ namespace Consoler
 			{
 				Console.BackgroundColor = color;
 				Console.CursorLeft = position++;
-				Console.Write(" ");
+				Console.Write(".");
 			}
 
 			//draw unfilled part
@@ -79,22 +104,39 @@ namespace Consoler
 				Console.ForegroundColor = ConsoleColor.White;
 			}
 
+
+
 			//draw the rest
 			Console.CursorLeft = 35;
 			Console.BackgroundColor = ConsoleColor.Black;
 			Console.Write(message);
+		
+			if(T)
+			{
+				Console.Write(" {0}", animList[animIndex]);
+				animIndex++;
+				if(animIndex >= 4) { animIndex -= 4; }
+			}        
+		
+		
 		}
 
 		public static async Task Main()
 		{
-			Console.WindowHeight = 50;
-			Console.WindowWidth = 75;
-
-			StartupAnimation();
-
+			if (isInit)
+			{
+				Init();
+				StartupAnimation();
+				isInit = false;
+			}
+			try
+			{
+				Console.WindowHeight = 50;
+				Console.WindowWidth = 75;
+			}
+			catch { }
 
 			await Player.ExperienceBar();
-			Console.WriteLine("\nBOOT SUCCESSFUL.\nWelcome, {0}\n\n\n", userName);
 
 			await CommandInput();
 			//await Task.Run(Player.PlaytimeExperience);
@@ -103,40 +145,42 @@ namespace Consoler
 		public static async Task CommandInput()
 		{
 			Console.Write("\n@root/user/home > ");
-			string? command = Console.ReadLine().ToLower();
+			string? command = Console.ReadLine().ToLower().ToString();
+
+
 
 			switch (command)
 			{
 				case "work":
 					if (canPerformAction["work"] == true)
 					{
-                        int workTime = r.Next(100, 250);
-                        Console.CursorVisible = false;
-                        for (int i = 0; i < workTime; i++)
-                        {
-                            drawTextProgressBar(i, workTime, ConsoleColor.Yellow, "Working...");
-                            await Task.Delay(50);
-                        }
-                        Console.CursorVisible = true;
-                        int moneyGained = r.Next(0, 100 * (Player.level) / 2);
-                        Player.money += moneyGained;
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"\n+{moneyGained}$");
-                        Console.ForegroundColor = ConsoleColor.White;
+						int workTime = r.Next(100, 150);
+						Console.CursorVisible = false;
+						for (int i = 0; i < workTime; i++)
+						{
+							drawTextProgressBar(i, workTime, ConsoleColor.Yellow, "Working...", true);
+							await Task.Delay(50);
+						}
+						Console.CursorVisible = true;
+						int moneyGained = r.Next(0, 100 * (Player.level) / 2);
+						Player.money += moneyGained;
+						Console.ForegroundColor = ConsoleColor.Green;
+						Console.WriteLine($"\n+{moneyGained}$");
+						Console.ForegroundColor = ConsoleColor.White;
 					}
-                    else
+					else
 					{
 						Console.WriteLine("You cannot work yet!\n{0} remaining...");
 					}
 					break;
 
 
-                case "study" or "learn":
-					int studyTime = r.Next(250, 350);
-					int experienceGained = r.Next(0, 50 * Player.level / 4);
+				case "study" or "learn":
+					int studyTime = r.Next(150, 200);
+					int experienceGained = r.Next(10, 50 * Player.level / 4);
 					for (int i = 0; i < studyTime; i++)
 					{
-						drawTextProgressBar(i, studyTime, ConsoleColor.Cyan, "Studying...");
+						drawTextProgressBar(i, studyTime, ConsoleColor.Cyan, "Studying...", true);
 						await Task.Delay(150);
 					}
 					await Player.GrantExperience(experienceGained);
@@ -145,18 +189,20 @@ namespace Consoler
 				case "crime":
 					int chanceToGetCaught = 5;
 					int rolledNumber = r.Next(0, 100);
-					if(rolledNumber > chanceToGetCaught)
+					if (rolledNumber > chanceToGetCaught)
 					{
 						int moneyGained = r.Next(50, 100 * Player.level / 2);
-						experienceGained = r.Next(25,100 * Player.level / 4);
+						experienceGained = r.Next(25, 100 * Player.level / 4);
 						Console.WriteLine($"You commited a crime and it paid off!");
-						
+
 						Console.ForegroundColor = ConsoleColor.Green;
 						Console.WriteLine($"+{moneyGained}$");
-						
+
 						Console.ForegroundColor = ConsoleColor.Cyan;
 						Console.Write($" +{experienceGained} EXP");
 						Console.ForegroundColor = ConsoleColor.White;
+						await Player.GrantExperience(experienceGained);
+						Player.money += moneyGained;
 					}
 					else
 					{
@@ -173,23 +219,32 @@ namespace Consoler
 					break;
 
 				case "sus": //sussy :eyes:
-					Console.Beep(200, 300);
+					try
+					{
 
-					Thread.Sleep(350);
+						Console.Beep(200, 300);
 
-					Console.Beep(250, 300);
-					Console.Beep(300, 300);
-					Console.Beep(350, 300);
-					Console.Beep(400, 300);
-					Console.Beep(350, 300);
-					Console.Beep(300, 300);
-					Console.Beep(250, 300);
+						Thread.Sleep(350);
 
-					Thread.Sleep(550);
+						Console.Beep(250, 300);
+						Console.Beep(300, 300);
+						Console.Beep(350, 300);
+						Console.Beep(400, 300);
+						Console.Beep(350, 300);
+						Console.Beep(300, 300);
+						Console.Beep(250, 300);
 
-					Console.Beep(250, 200);
-					Console.Beep(300, 200);
-					Console.Beep(250, 200);
+						Thread.Sleep(550);
+
+						Console.Beep(300, 275);
+						Console.Beep(350, 275);
+						Console.Beep(300, 275);
+
+					}
+					catch
+					{
+						Console.WriteLine("Unknown command."); //spoofing for non-windows machines
+					}
 
 					break;
 
@@ -217,7 +272,7 @@ namespace Consoler
 					}
 					break;
 
-				default:   
+				default:
 					Console.WriteLine("Unknown command.");
 					break;
 			}
@@ -246,9 +301,9 @@ namespace Consoler
 		{
 			int x = Console.GetCursorPosition().Left;
 			int y = Console.GetCursorPosition().Top;
-			Console.SetCursorPosition(10, 4);
-			Program.drawTextProgressBar(exp, expToLevelUp, ConsoleColor.Cyan, "");
-			Console.SetCursorPosition(35, 5);
+			Console.SetCursorPosition(10, 0);
+			Program.drawTextProgressBar(exp, expToLevelUp, ConsoleColor.Cyan, "", false);
+			Console.SetCursorPosition(15, 1);
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.WriteLine($"${money}");
 			Console.ForegroundColor = ConsoleColor.White;
@@ -265,7 +320,7 @@ namespace Consoler
 			}
 			await ExperienceBar();
 		}
-	
+
 		public static bool ChangeActionAvaibility(bool T)
 		{
 			return T = true;

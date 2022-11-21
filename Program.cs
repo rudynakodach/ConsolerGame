@@ -24,6 +24,7 @@ namespace Consoler
 		private static bool isInit = true;
 		private static void Init()
 		{
+			Console.CursorVisible = false;
 			Console.Title = $"\n{computerName}@root/user/home";
 		}
 
@@ -136,6 +137,7 @@ namespace Consoler
 
 		public static async Task CommandInput()
 		{
+			Console.CursorVisible = true;
 
 			Console.Write($"\n{computerName}@root/user/home > ");
 
@@ -144,6 +146,7 @@ namespace Consoler
 			switch (command)
 			{
 				case "work":
+					canDrawProgressBars = false;
 					if (Player.isActionAvaible)
 					{
 						int workTime = r.Next(100, 150);
@@ -151,15 +154,17 @@ namespace Consoler
 						for (int i = 0; i < workTime; i++)
 						{
 							DrawTextProgressBar(i, workTime, ConsoleColor.Yellow, "Working...", true);
-							await Task.Delay(50);
+							await Task.Delay(100);
 						}
 						Console.CursorVisible = true;
 						float moneyGained = (float)r.NextDouble() * r.Next(0, 100 * (Player.level) / 2);
 						Player.money += moneyGained;
 						Console.ForegroundColor = ConsoleColor.Green;
-						Console.WriteLine($"\n+{moneyGained}$");
+						Console.WriteLine($"\n+{moneyGained:0.00)}$");
 						Console.ForegroundColor = ConsoleColor.White;
 						new Thread(Player.CommandDelay).Start();
+						canDrawProgressBars = true;
+						Player.ExperienceBar();
 					}
 					else
 					{
@@ -168,6 +173,7 @@ namespace Consoler
 					break;
 
 				case "study" or "learn":
+					canDrawProgressBars = false;
 					if (Player.isActionAvaible)
 					{
 						Console.CursorVisible = false;
@@ -176,11 +182,14 @@ namespace Consoler
 						for (int i = 0; i < studyTime; i++)
 						{
 							DrawTextProgressBar(i, studyTime, ConsoleColor.Cyan, "Studying...", true);
-							await Task.Delay(150);
+							await Task.Delay(100);
 						}
 						Player.GrantExperience(experienceGained);
 						Console.CursorVisible = true;
 						new Thread(Player.CommandDelay).Start();
+                        
+						canDrawProgressBars = true;
+                        Player.ExperienceBar();
 					}
 					else
 					{
@@ -206,6 +215,7 @@ namespace Consoler
 						Console.ForegroundColor = ConsoleColor.White;
 						Player.GrantExperience(experienceGained);
 						Player.money += moneyGained;
+						canDrawProgressBars = false;
 					}
 					else
 					{
@@ -428,13 +438,13 @@ namespace Consoler
 				{
 					if(!File.Exists(storeDirectory))
 					{
-                        File.Create(storeDirectory);
-                    }
-                    if (!File.Exists(finalDirectory))
+						File.Create(storeDirectory);
+					}
+					if (!File.Exists(finalDirectory))
 					{
-                        File.Create(finalDirectory);
-                    }
-                    Save();
+						File.Create(finalDirectory);
+					}
+					Save();
 				}
 			}
 			else

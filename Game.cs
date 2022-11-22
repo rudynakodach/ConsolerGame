@@ -199,6 +199,11 @@ namespace Consoler
 					}
 					break;
 
+				case string s
+					when s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 2 && s.Split(' ', StringSplitOptions.RemoveEmptyEntries)[1].ToLower() == "skin":
+					//todo
+					break;
+
 				case "crime":
 					int chanceToGetCaught = 5 * Player.criminalityIndex;
 					int rolledNumber = r.Next(0, 100);
@@ -390,8 +395,8 @@ namespace Consoler
 		{
 			while (true)
 			{
-				Thread.Sleep(30000);
-				GrantExperience(Game.r.Next(0, 5 * level / 2));
+				Thread.Sleep(15000);
+				GrantExperience(Game.r.Next(10, 20 * level / 2));
 			}
 		}
 

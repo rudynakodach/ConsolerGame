@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 
 namespace Consoler.Shop
 {
@@ -12,8 +11,8 @@ namespace Consoler.Shop
 
         public static Dictionary<string, float> shopInventory = new()
         {
-            { "Sluchawki Tomusia", 0f },
-            { "Kamerka Tomasza", 175f },
+            { "Sluchawki Tomusia", 75f },
+            { "Kamerka Tomasza", 200f },
             { "Królik", 500f }
         };
 

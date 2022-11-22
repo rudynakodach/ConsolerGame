@@ -6,12 +6,14 @@
 using Consoler.Shop;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Text;
 
 namespace Consoler
 {
-	class Program
+	class Game
 	{
+		const string UNDERLINE = "\x1B[4m";
+		const string RESET = "\x1B[0m";
+
 		public static bool canDrawProgressBars = true;
 
 		public static Thread playtimeThread = new(Player.PlaytimeExperience);
@@ -125,7 +127,7 @@ namespace Consoler
 				playtimeThread.Start();
 				incomeThread.Start();
 				Init();
-				StartupAnimation();
+				//StartupAnimation();
 				isInit = false;
 			}
 
@@ -157,10 +159,10 @@ namespace Consoler
 							await Task.Delay(100);
 						}
 						Console.CursorVisible = true;
-						float moneyGained = (float)r.NextDouble() * r.Next(0, 100 * (Player.level) / 2);
+						float moneyGained = (float)r.NextDouble() * r.Next(5 * Player.level, 100 * (Player.level) / 2);
 						Player.money += moneyGained;
 						Console.ForegroundColor = ConsoleColor.Green;
-						Console.WriteLine($"\n+{moneyGained:0.00)}$");
+						Console.WriteLine($"\n+{moneyGained:0.00}$");
 						Console.ForegroundColor = ConsoleColor.White;
 						new Thread(Player.CommandDelay).Start();
 						canDrawProgressBars = true;
@@ -187,9 +189,9 @@ namespace Consoler
 						Player.GrantExperience(experienceGained);
 						Console.CursorVisible = true;
 						new Thread(Player.CommandDelay).Start();
-                        
+
 						canDrawProgressBars = true;
-                        Player.ExperienceBar();
+						Player.ExperienceBar();
 					}
 					else
 					{
@@ -207,11 +209,16 @@ namespace Consoler
 						int experienceGained = r.Next(25, 100 * Player.level / 4);
 						Console.WriteLine($"You commited a crime and it paid off!");
 
+						if (Player.criminalityIndex! >= 5)
+						{
+							Player.criminalityIndex++;
+						}
+
 						Console.ForegroundColor = ConsoleColor.Green;
 						Console.WriteLine($"+{moneyGained:0.00}$");
 
 						Console.ForegroundColor = ConsoleColor.Cyan;
-						Console.Write($" +{experienceGained} EXP");
+						Console.Write($"+{experienceGained} EXP");
 						Console.ForegroundColor = ConsoleColor.White;
 						Player.GrantExperience(experienceGained);
 						Player.money += moneyGained;
@@ -222,7 +229,7 @@ namespace Consoler
 						int cooldown = r.Next(15, 30);
 						int moneyLost = r.Next(50, 50 * Player.level);
 						Console.WriteLine("You tried to commit a crime and got caught!");
-						Console.WriteLine("For your offences you are sentenced for {0}s of jail time.",cooldown*2);
+						Console.WriteLine("For your offences you are sentenced for {0}s of jail time.", cooldown * 2);
 						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine($"-{moneyLost}$");
 						Console.ForegroundColor = ConsoleColor.White;
@@ -230,8 +237,33 @@ namespace Consoler
 					}
 					break;
 
+				case "debug":
+					int workerThreads;
+					int completionPortThreads;
+					ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
+
+					Console.WriteLine($"THREADS\n\nworkerThreads: {workerThreads}\ncompletionPortThreads: {completionPortThreads} \nincomeThreadState: {incomeThread.ThreadState}\nplaytimeThreadState: {playtimeThread.ThreadState}");
+					Console.WriteLine($"\nVARIABLES\n\ncriminalityIndex: {Player.criminalityIndex}");
+
+					break;
+
 				case "stat":
-					Console.WriteLine($"\nLevel: {Player.level}\nExperience: {Player.exp}/{Player.ExpToLevelUp}\nMoney: {Player.money:0.00}$");
+					Console.WriteLine($"\nLevel: {Player.level}\nExperience: {Player.exp}/{Player.ExpToLevelUp}\nMoney: {Player.money:0.00}$ {UNDERLINE}{Player.passiveIncome:0.00}/s{RESET}");
+					if (Player.playerInventory.Count > 0)
+					{
+						Console.WriteLine("\n-----------------ITEMS-----------------\n");
+						foreach (var item in Player.playerInventory)
+						{
+							Console.ForegroundColor = ConsoleColor.Magenta;
+							Console.WriteLine("---------------------------------------\n");
+							Console.ForegroundColor = ConsoleColor.White;
+							Console.WriteLine("     {0:-35}{1:20}", item.Key, $"{Console.ForegroundColor = ConsoleColor.Green}{UNDERLINE}{item.Value:0.00}${RESET}{Console.ForegroundColor = ConsoleColor.White}");
+						}
+						Console.ForegroundColor = ConsoleColor.Magenta;
+						Console.WriteLine("\n---------------------------------------");
+						Console.ForegroundColor = ConsoleColor.White;
+					}
+
 					break;
 
 				case "reset":
@@ -243,6 +275,18 @@ namespace Consoler
 						Player.level = 0;
 						Player.exp = 0;
 						Player.money = 0;
+						Player.criminalityIndex = 1;
+						Player.passiveIncome = 0;
+
+						Player.playerInventory = new();
+
+						Store.shopInventory = new()
+						{
+							{ "Sluchawki Tomusia", 0f },
+							{ "Kamerka Tomasza", 175f },
+							{ "Królik", 500f }
+						};
+
 						PlayerDataManagement.Save();
 					}
 					break;
@@ -315,7 +359,7 @@ namespace Consoler
 				case "shop" or "store":
 					canDrawProgressBars = false;
 					Console.Clear();
-					Consoler.Shop.Store.ShopInterface();
+					Store.ShopInterface();
 					return;
 
 				default:
@@ -328,6 +372,8 @@ namespace Consoler
 
 	class Player
 	{
+		public static Dictionary<string, float> playerInventory = new();
+
 		public static bool isCrimeAvaible = true;
 		public static bool isActionAvaible = true;
 		public static float money = 0;
@@ -345,15 +391,18 @@ namespace Consoler
 			while (true)
 			{
 				Thread.Sleep(30000);
-				GrantExperience(Program.r.Next(0, 5 * level / 2));
+				GrantExperience(Game.r.Next(0, 5 * level / 2));
 			}
 		}
 
 		public static void PassiveIncome()
 		{
-			money += passiveIncome;
+			while (true)
+			{
+				money += passiveIncome;
 
-			Thread.Sleep(1000);
+				Thread.Sleep(1000);
+			}
 		}
 
 		public static void CommandDelay()
@@ -365,7 +414,7 @@ namespace Consoler
 
 		public static void CrimeDelay()
 		{
-			int cooldown = Program.r.Next(15, 30);
+			int cooldown = Game.r.Next(15, 30);
 			isCrimeAvaible = false;
 			Thread.Sleep(cooldown * 1000);
 			isCrimeAvaible = false;
@@ -373,7 +422,7 @@ namespace Consoler
 
 		public static void ExperienceBar()
 		{
-			if (!Program.canDrawProgressBars)
+			if (!Game.canDrawProgressBars)
 			{
 				return;
 			}
@@ -381,7 +430,7 @@ namespace Consoler
 			int x = Console.GetCursorPosition().Left;
 			int y = Console.GetCursorPosition().Top;
 			Console.SetCursorPosition(10, 3);
-			Program.DrawTextProgressBar(exp, ExpToLevelUp, ConsoleColor.Cyan, "", false);
+			Game.DrawTextProgressBar(exp, ExpToLevelUp, ConsoleColor.Cyan, "", false);
 			Console.SetCursorPosition(18 - moneyString.Length, 4);
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.WriteLine(moneyString);
@@ -405,13 +454,12 @@ namespace Consoler
 		private static readonly string saveRoot = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 		private static readonly string gamesDirectory = saveRoot + @"\Consoler";
 		private static readonly string finalDirectory = gamesDirectory + @"\save.json";
-		private static readonly string storeDirectory = gamesDirectory + @"\store.json";
 
 		public static void Save()
 		{
 			if (Directory.Exists(gamesDirectory))
 			{
-				if (File.Exists(finalDirectory) && File.Exists(storeDirectory))
+				if (File.Exists(finalDirectory))
 				{
 
 					Dictionary<string, float> playerData = new()
@@ -420,12 +468,12 @@ namespace Consoler
 						{ "playerPassiveIncome", Player.passiveIncome },
 						{ "level", Player.level },
 						{ "experience", Player.exp },
-						{ "criminalityLevel", Player.criminalityIndex }
+						{ "criminalityIndex", Player.criminalityIndex }
 					};
 
 					List<Dictionary<string, float>> shopItems = new() { Store.shopInventory };
 
-					Tuple<Dictionary<string, float>, List<Dictionary<string, float>>> saveData = new(item1: playerData, item2: shopItems);
+					Tuple<Dictionary<string, float>, List<Dictionary<string, float>>, Dictionary<string, float>> saveData = new(item1: playerData, item2: shopItems, item3: Player.playerInventory);
 
 					var jsonData = JsonConvert.SerializeObject(saveData, Formatting.Indented);
 
@@ -436,19 +484,18 @@ namespace Consoler
 				}
 				else
 				{
-					if(!File.Exists(storeDirectory))
-					{
-						File.Create(storeDirectory);
-					}
-					if (!File.Exists(finalDirectory))
-					{
-						File.Create(finalDirectory);
-					}
+					Console.ForegroundColor = ConsoleColor.Red;
+					Console.WriteLine("Operation failed...");
+					Console.ForegroundColor = ConsoleColor.White;
+					File.Create(finalDirectory);
 					Save();
 				}
 			}
 			else
 			{
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine("Operation failed...");
+				Console.ForegroundColor = ConsoleColor.White;
 				Directory.CreateDirectory(gamesDirectory);
 				Save();
 			}
@@ -458,17 +505,33 @@ namespace Consoler
 			if (File.Exists(finalDirectory))
 			{
 				string rawSaveData = File.ReadAllText(finalDirectory);
-				var jsonRoot = JToken.Parse(rawSaveData);
+				var mainRoot = JToken.Parse(rawSaveData).Root;
 
-				Console.WriteLine(jsonRoot);
-				Console.ReadLine();
+				var userDataRoot = mainRoot.SelectToken("Item1");
 
-				Player.level = (int)jsonRoot.SelectToken("level");
-				Player.exp = (int)jsonRoot.SelectToken("experience");
-				Player.money = (float)jsonRoot.SelectToken("money");
-				Player.criminalityIndex = (int)jsonRoot.SelectToken("criminalityIndex");
-				Player.passiveIncome = (float)jsonRoot.SelectToken("playerPassiveIncome");
+				Player.level = (int)userDataRoot.SelectToken("level");
+				Player.exp = (int)userDataRoot.SelectToken("experience");
+				Player.money = (float)userDataRoot.SelectToken("money");
+				Player.criminalityIndex = (int)userDataRoot.SelectToken("criminalityIndex");
+				Player.passiveIncome = (float)userDataRoot.SelectToken("playerPassiveIncome");
 
+				var shopInventoryRoot = mainRoot.SelectToken("Item2");
+				string shopInventoryJsonString = shopInventoryRoot.ToString();
+
+				shopInventoryJsonString = shopInventoryJsonString.Remove(0, 1);
+				shopInventoryJsonString = shopInventoryJsonString.Remove(shopInventoryJsonString.Length - 1, 1);
+
+				Store.shopInventory = JsonConvert.DeserializeObject<Dictionary<string, float>>(shopInventoryJsonString);
+
+				var playerInventoryRoot = mainRoot.SelectToken("Item3");
+				string playerInventoryJsonString = playerInventoryRoot.ToString();
+
+
+
+				if (!string.IsNullOrWhiteSpace(playerInventoryJsonString))
+				{
+					Player.playerInventory = JsonConvert.DeserializeObject<Dictionary<string, float>>(playerInventoryJsonString);
+				}
 				Console.WriteLine("Data loaded.");
 			}
 		}

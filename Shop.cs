@@ -13,7 +13,10 @@ namespace Consoler.Shop
         {
             { "Sluchawki Tomusia", 75f },
             { "Kamerka Tomasza", 200f },
-            { "Królik", 500f }
+            { "Królik", 500f },
+            { "yellow", 5000f },
+            { "red", 7500f },
+            { "cyan", 10000f }
         };
 
         public static async void ShopInterface()
@@ -64,6 +67,16 @@ namespace Consoler.Shop
                                     case "Kamerka Tomasza":
                                         Player.passiveIncome += 0.75f;
                                         break;
+                                    case "fore.yellow":
+                                        Player.playerInventory.Add(r, shopInventory[r]);
+                                        break;
+                                    case "fore.red":
+                                        Player.playerInventory.Add(r, shopInventory[r]);
+                                        break;
+                                    case "fore.cyan":
+                                        Player.playerInventory.Add(r, shopInventory[r]);
+                                        break;
+
                                 }
                                 shopInventory.Remove(r);
                             }
